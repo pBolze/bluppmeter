@@ -246,7 +246,7 @@ const okButton = document.getElementById("okButton");
 
 let volume = 10;
 let taps = 0;
-let countdown = 60;
+let t_countdown = 10;
 let timer = null;
 let running = false;
 
@@ -273,6 +273,10 @@ function showCountdown() {
         '<div class="countdown">' +
             '<div class="countdownValue">' + countdown + '</div>' +
             '<div class="countdownLabel">Sekunden</div>' +
+            '<div style="margin-top:20px;font-size:2rem;font-weight:700;color:var(--wine)">' +
+                taps +
+            '</div>' +
+            '<div class="countdownLabel">Blupps</div>' +
         '</div>';
 }
 
@@ -298,7 +302,7 @@ function startMeasurement() {
     clearInterval(timer);
 
     taps = 0;
-    countdown = 60;
+    countdown = t_countdown;
     running = true;
 
     showCountdown();
@@ -370,9 +374,9 @@ tapArea.addEventListener("pointerdown", (event) => {
     }
 
     taps++;
+	showCountdown();
 
     tapArea.classList.add("flash");
-
     createBubble();
 
     setTimeout(() => {
