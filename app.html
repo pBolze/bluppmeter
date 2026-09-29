@@ -251,9 +251,7 @@ let running = false;
 let startTime = 0;
 let elapsedSec = 0;
 let firstTapSec = null;
-let lastTapSec = 0;
-let endMode = null;   // 'taps' oder 'time'
-let endValue = null;  // Anzahl Taps ODER Dauer in Sekunden
+let endTaps = null;  // Anzahl Taps bis Messende
 
 function updateVolumeDisplay() {
     volumeDisplay.textContent = volume;
@@ -285,12 +283,12 @@ function showDisplay() {
         '</div>';
 }
 
-function determineEndCondition(firstTap) {
+function determineEndTaps(firstTap) {
     // Grenzen: Untergrenze inklusive, Obergrenze exklusive
-    if (firstTap < 10) return { mode: 'taps', value: 4 };
-    if (firstTap < 20) return { mode: 'taps', value: 3 };
-    if (firstTap < 40) return { mode: 'taps', value: 2 };
-    return { mode: 'taps', value: 1 };
+    if (firstTap < 10) return 4;
+    if (firstTap < 20) return 3;
+    if (firstTap < 40) return 2;
+    return 1;
 }
 
 function finishMeasurement(durationSec) {
@@ -357,27 +355,16 @@ function startMeasurement() {
     taps = 0;
     elapsedSec = 0;
     firstTapSec = null;
-    lastTapSec = 0;
-    endMode = null;
-    endValue = null;
+    endTaps = null;
     startTime = Date.now();
     running = true;
 
     showDisplay();
 
     timer = setInterval(() => {
-
         if (!running) return;
-
         elapsedSec = Math.floor((Date.now() - startTime) / 1000);
         showDisplay();
-
-        // Zeit-basiertes Ende (nur wenn erster Tap gefallen ist
-        // und endMode='time' festgelegt wurde)
-        if (endMode === 'time' && elapsedSec >= endValue) {
-            finishMeasurement(endValue);
-        }
-
     }, 250);
 }
 
@@ -404,14 +391,11 @@ tapArea.addEventListener("pointerdown", (event) => {
 
     const tapSec = (Date.now() - startTime) / 1000;
     taps++;
-    lastTapSec = tapSec;
 
     // Erster Tap: Endbedingung festlegen
     if (firstTapSec === null) {
         firstTapSec = tapSec;
-        const cond = determineEndCondition(firstTapSec);
-        endMode = cond.mode;
-        endValue = cond.value;
+        endTaps = determineEndTaps(firstTapSec);
     }
 
     elapsedSec = Math.floor(tapSec);
@@ -426,8 +410,8 @@ tapArea.addEventListener("pointerdown", (event) => {
 
     // Tap-basiertes Ende: sobald die geforderte Anzahl Taps
     // erreicht ist, sofort beenden — Dauer = Zeit des letzten Taps
-    if (endMode === 'taps' && taps >= endValue) {
-        finishMeasurement(lastTapSec);
+    if (taps >= endTaps) {
+        finishMeasurement(tapSec);
     }
 });
 
