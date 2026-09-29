@@ -294,7 +294,8 @@ function determineEndCondition(firstTap) {
     if (firstTap < 12) return { mode: 'taps', value: 5 };
     if (firstTap < 15) return { mode: 'taps', value: 4 };
     if (firstTap < 20) return { mode: 'taps', value: 3 };
-    return { mode: 'taps', value: 2 };
+    if (firstTap < 40) return { mode: 'taps', value: 2 };
+    return { mode: 'taps', value: 1 };
 }
 
 function finishMeasurement(durationSec) {
