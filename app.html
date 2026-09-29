@@ -287,8 +287,9 @@ function showDisplay() {
 
 function determineEndCondition(firstTap) {
     // Grenzen: Untergrenze inklusive, Obergrenze exklusive
-    if (firstTap <  4) return { mode: 'time', value: 20 };
-    if (firstTap <  8) return { mode: 'time', value: 30 };
+    if (firstTap <  4) return { mode: 'time', value: 25 };
+    if (firstTap <  6) return { mode: 'time', value: 40 };
+    if (firstTap <  8) return { mode: 'taps', value: 7 };
     if (firstTap < 10) return { mode: 'taps', value: 6 };
     if (firstTap < 12) return { mode: 'taps', value: 5 };
     if (firstTap < 15) return { mode: 'taps', value: 4 };
