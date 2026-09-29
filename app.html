@@ -246,9 +246,14 @@ const okButton = document.getElementById("okButton");
 
 let volume = 10;
 let taps = 0;
-let t_countdown = 10;
 let timer = null;
 let running = false;
+let startTime = 0;
+let elapsedSec = 0;
+let firstTapSec = null;
+let lastTapSec = 0;
+let endMode = null;   // 'taps' oder 'time'
+let endValue = null;  // Anzahl Taps ODER Dauer in Sekunden
 
 function updateVolumeDisplay() {
     volumeDisplay.textContent = volume;
@@ -268,15 +273,66 @@ minusBtn.addEventListener("click", () => {
     }
 });
 
-function showCountdown() {
+function showDisplay() {
     tapArea.innerHTML =
         '<div class="countdown">' +
-            '<div class="countdownValue">' + countdown + '</div>' +
+            '<div class="countdownValue">' + elapsedSec + '</div>' +
             '<div class="countdownLabel">Sekunden</div>' +
             '<div style="margin-top:20px;font-size:2rem;font-weight:700;color:var(--wine)">' +
                 taps +
             '</div>' +
             '<div class="countdownLabel">Blupps</div>' +
+        '</div>';
+}
+
+function determineEndCondition(firstTap) {
+    // Grenzen: Untergrenze inklusive, Obergrenze exklusive
+    if (firstTap <  4) return { mode: 'time', value: 20 };
+    if (firstTap <  8) return { mode: 'time', value: 30 };
+    if (firstTap < 10) return { mode: 'taps', value: 6 };
+    if (firstTap < 12) return { mode: 'taps', value: 5 };
+    if (firstTap < 15) return { mode: 'taps', value: 4 };
+    if (firstTap < 20) return { mode: 'taps', value: 3 };
+    return { mode: 'taps', value: 2 };
+}
+
+function finishMeasurement(durationSec) {
+    clearInterval(timer);
+    running = false;
+
+    let result = 0;
+    if (durationSec > 0 && taps > 0) {
+        result = Math.round((taps * 3600) / durationSec / volume);
+    }
+
+    const durationDisplay =
+        (Math.round(durationSec * 10) / 10)
+            .toString()
+            .replace('.', ',');
+
+    tapArea.innerHTML =
+        '<div class="result">' +
+
+            '<div class="resultTitle">' +
+            '🍇 GÄRINTENSITÄT' +
+            '</div>' +
+
+            '<div class="resultValue">' +
+            result +
+            '</div>' +
+
+            '<div class="resultUnit">' +
+            'blp/h/l' +
+            '</div>' +
+
+            '<div class="separator"></div>' +
+
+            '<div class="resultDetails">' +
+            volume + ' l Ansatz<br>' +
+            taps + ' Blupps<br>' +
+            durationDisplay + ' Sekunden' +
+            '</div>' +
+
         '</div>';
 }
 
@@ -302,54 +358,30 @@ function startMeasurement() {
     clearInterval(timer);
 
     taps = 0;
-    countdown = t_countdown;
+    elapsedSec = 0;
+    firstTapSec = null;
+    lastTapSec = 0;
+    endMode = null;
+    endValue = null;
+    startTime = Date.now();
     running = true;
 
-    showCountdown();
+    showDisplay();
 
     timer = setInterval(() => {
 
-        countdown--;
+        if (!running) return;
 
-        if (countdown >= 0) {
-            showCountdown();
+        elapsedSec = Math.floor((Date.now() - startTime) / 1000);
+        showDisplay();
+
+        // Zeit-basiertes Ende (nur wenn erster Tap gefallen ist
+        // und endMode='time' festgelegt wurde)
+        if (endMode === 'time' && elapsedSec >= endValue) {
+            finishMeasurement(endValue);
         }
 
-        if (countdown <= 0) {
-
-            clearInterval(timer);
-            running = false;
-
-            const result =
-                Math.round((taps * 60) / volume);
-
-            tapArea.innerHTML =
-                '<div class="result">' +
-
-                    '<div class="resultTitle">' +
-                    '🍇 GÄRINTENSITÄT' +
-                    '</div>' +
-
-                    '<div class="resultValue">' +
-                    result +
-                    '</div>' +
-
-                    '<div class="resultUnit">' +
-                    'blp/h/l' +
-                    '</div>' +
-
-                    '<div class="separator"></div>' +
-
-                    '<div class="resultDetails">' +
-                    volume + ' l Ansatz<br>' +
-                    taps + ' Blupps<br>' +
-                    '60 Sekunden' +
-                    '</div>' +
-
-                '</div>';
-        }
-
-    }, 1000);
+    }, 250);
 }
 
 function showVolumeDialog() {
@@ -373,8 +405,20 @@ tapArea.addEventListener("pointerdown", (event) => {
         return;
     }
 
+    const tapSec = (Date.now() - startTime) / 1000;
     taps++;
-	showCountdown();
+    lastTapSec = tapSec;
+
+    // Erster Tap: Endbedingung festlegen
+    if (firstTapSec === null) {
+        firstTapSec = tapSec;
+        const cond = determineEndCondition(firstTapSec);
+        endMode = cond.mode;
+        endValue = cond.value;
+    }
+
+    elapsedSec = Math.floor(tapSec);
+    showDisplay();
 
     tapArea.classList.add("flash");
     createBubble();
@@ -382,6 +426,12 @@ tapArea.addEventListener("pointerdown", (event) => {
     setTimeout(() => {
         tapArea.classList.remove("flash");
     }, 120);
+
+    // Tap-basiertes Ende: sobald die geforderte Anzahl Taps
+    // erreicht ist, sofort beenden — Dauer = Zeit des letzten Taps
+    if (endMode === 'taps' && taps >= endValue) {
+        finishMeasurement(lastTapSec);
+    }
 });
 
 updateVolumeDisplay();
